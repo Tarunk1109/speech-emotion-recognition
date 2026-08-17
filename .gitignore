@@ -1,0 +1,24 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Raw dataset (840MB+, download separately — see README)
+data/raw/
+
+# Cached feature arrays (regenerate with src/build_dataset.py)
+data/processed/*.npy
+data/processed/_uploaded_tmp.wav
+
+# Logs and run artifacts
+*.log
+
+# Word lock files
+~$*.docx
+Project_Report_Template.docx
+
+# OS
+.DS_Store
+
+# Claude Code local settings (may contain tool-call history / tokens)
+.claude/
