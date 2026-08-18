@@ -5,41 +5,52 @@ from tensorflow.keras import layers, models
 
 
 def build_ann(input_dim: int, num_classes: int) -> models.Sequential:
+    """The simplest model: takes the 40-number MFCC vector and passes it through
+    a stack of Dense layers, each one mixing the numbers together and shrinking
+    them down, until we're left with 8 numbers -- one probability per emotion."""
     model = models.Sequential([
-        layers.Input(shape=(input_dim,)),
-        layers.Dense(256, activation="relu"),
+        layers.Input(shape=(input_dim,)),          # 40 numbers in (the MFCC vector)
+        layers.Dense(256, activation="relu"),        # mix into 256 numbers
+        layers.Dropout(0.3),                           # randomly ignore 30% of them (prevents memorizing)
+        layers.Dense(128, activation="relu"),        # squeeze down to 128
         layers.Dropout(0.3),
-        layers.Dense(128, activation="relu"),
-        layers.Dropout(0.3),
-        layers.Dense(64, activation="relu"),
-        layers.Dense(num_classes, activation="softmax"),
+        layers.Dense(64, activation="relu"),         # squeeze down to 64
+        layers.Dense(num_classes, activation="softmax"),  # 8 numbers out (one per emotion, sums to 100%)
     ])
     model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
     return model
 
 
 def build_cnn(input_shape: tuple, num_classes: int) -> models.Sequential:
+    """Treats the 128x130 spectrogram like a picture. Three rounds of
+    Conv2D -> BatchNorm -> MaxPooling -> Dropout each look for patterns, then
+    shrink the picture in half; by the end we've gone from a big picture to a
+    small, pattern-rich summary that the last two Dense layers turn into a guess."""
     model = models.Sequential([
-        layers.Input(shape=input_shape),  # (n_mels, time, 1)
+        layers.Input(shape=input_shape),  # (128 pitch bands, 130 time steps, 1)
+
+        # --- round 1: look for small, simple patterns ---
         layers.Conv2D(32, (3, 3), activation="relu", padding="same"),
         layers.BatchNormalization(),
-        layers.MaxPooling2D((2, 2)),
+        layers.MaxPooling2D((2, 2)),   # shrink the picture by half
         layers.Dropout(0.25),
 
+        # --- round 2: look for combinations of round-1 patterns ---
         layers.Conv2D(64, (3, 3), activation="relu", padding="same"),
         layers.BatchNormalization(),
         layers.MaxPooling2D((2, 2)),
         layers.Dropout(0.25),
 
+        # --- round 3: look for bigger, more complex patterns ---
         layers.Conv2D(128, (3, 3), activation="relu", padding="same"),
         layers.BatchNormalization(),
         layers.MaxPooling2D((2, 2)),
         layers.Dropout(0.3),
 
-        layers.Flatten(),
+        layers.Flatten(),                                # turn the small picture into one long list of numbers
         layers.Dense(128, activation="relu"),
         layers.Dropout(0.4),
-        layers.Dense(num_classes, activation="softmax"),
+        layers.Dense(num_classes, activation="softmax"),  # 8 numbers out (one per emotion)
     ])
     model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
     return model
